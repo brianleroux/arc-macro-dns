@@ -42,3 +42,4 @@ ws
 ## TODO
 - [ ] update outputs to use dns values
 - [ ] update env vars to use dns values
+- [ ] throw an error if not in us-east-1

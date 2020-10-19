@@ -10,6 +10,7 @@ false # important; if we don't have this the deploy script will disable
 @ws
 
 @http
+any /*
 get /api
 
 @static

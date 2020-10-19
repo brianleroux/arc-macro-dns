@@ -7,7 +7,7 @@
   console.log(`api result`, data)
 
   // connect to it
-  let ws = new WebSocket(data.wss)
+  let ws = new WebSocket(window.WSS_URL)
   ws.onopen = console.log
   ws.onclose = console.log
   ws.onmessage = console.log
