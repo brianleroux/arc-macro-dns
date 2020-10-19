@@ -1,5 +1,6 @@
 let getTLD = require('./get-tld')
 let getStaticCDN = require('./get-static-cdn')
+let getHttpCDN = require('./get-http-cdn')
 let getAlias = require('./get-alias')
 let getZoneID = require('./get-zone-id')
 
@@ -43,7 +44,20 @@ module.exports = async function dns (arc, cfn, stage) {
     }
 
     // setup @http dns
-    // setup @ws dns
+    let hasHttp = i => Object.keys(i)[0] === 'http'
+    if (arc.dns.some(hasHttp)) {
+      let ref = arc.dns.find(hasHttp)['http']
+      cfn.Resources.HttpCDN = getHttpCDN({ domain: ref[stage] })
+      cfn.Resources.HttpDNS = getAlias({ zone, cdn: 'HttpCDN', domain: ref[stage] })
+    }
+
+    /* setup @ws dns
+    let hasWs = i => Object.keys(i)[0] === 'ws'
+    if (arc.dns.some(hasHttp)) {
+      let ref = arc.dns.find(hasWs)['ws']
+      cfn.Resources.WsCDN = getWsCDN({ domain: ref[stage] })
+      cfn.Resources.WsDNS = getAlias({ zone, cdn: 'WsCDN', domain: ref[stage] })
+    }*/
 
   // end
   }

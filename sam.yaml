@@ -1,7 +1,84 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Exported by architect/package@3.0.0-RC.2 on 2020-10-19T01:13:04.959Z
+Description: Exported by architect/package@3.0.0-RC.2 on 2020-10-19T01:41:47.495Z
 Resources:
+  HTTP:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      DefinitionBody:
+        openapi: 3.0.1
+        info:
+          title:
+            Ref: AWS::StackName
+        paths:
+          /{proxy+}:
+            get:
+              x-amazon-apigateway-integration:
+                payloadFormatVersion: '2.0'
+                type: aws_proxy
+                httpMethod: POST
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetCatchall.Arn}/invocations
+                connectionType: INTERNET
+          /_static/{proxy+}:
+            get:
+              x-amazon-apigateway-integration:
+                payloadFormatVersion: '1.0'
+                type: http_proxy
+                httpMethod: GET
+                uri:
+                  Fn::Sub:
+                  - http://${bukkit}.s3.${AWS::Region}.amazonaws.com/{proxy}
+                  - bukkit:
+                      Ref: StaticBucket
+                connectionType: INTERNET
+                timeoutInMillis: 30000
+  GetCatchall:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      CodeUri: s3://macro-dns-cfn-deployments-409d9/90559137cb568c490101b51675b5c019
+      Runtime: nodejs12.x
+      MemorySize: 1152
+      Timeout: 5
+      Environment:
+        Variables:
+          ARC_ROLE:
+            Ref: Role
+          ARC_CLOUDFORMATION:
+            Ref: AWS::StackName
+          ARC_APP_NAME: macro-dns
+          ARC_HTTP: aws_proxy
+          NODE_ENV: staging
+          SESSION_TABLE_NAME: jwe
+          ARC_STATIC_BUCKET:
+            Ref: StaticBucket
+      Role:
+        Fn::Sub:
+        - arn:aws:iam::${AWS::AccountId}:role/${roleName}
+        - roleName:
+            Ref: Role
+      Events:
+        GetCatchallEvent:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: GET
+            ApiId:
+              Ref: HTTP
+  InvokeArcStaticAssetProxy:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: GetCatchall
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub:
+        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*/*
+        - ApiId:
+            Ref: HTTP
   StaticBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -160,7 +237,86 @@ Resources:
             Fn::GetAtt:
             - StaticCDN
             - DomainName
+  HttpCDN:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Aliases:
+        - qa.arc-macro-dns.com
+        HttpVersion: http2
+        IPV6Enabled: true
+        Enabled: true
+        Origins:
+        - Id: HttpEdgeOrigin
+          DomainName:
+            Fn::Sub:
+            - ${ApiId}.execute-api.${AWS::Region}.amazonaws.com
+            - ApiId:
+                Ref: HTTP
+          CustomOriginConfig:
+            HTTPPort: 80
+            HTTPSPort: 443
+            OriginKeepaliveTimeout: 5
+            OriginProtocolPolicy: https-only
+            OriginReadTimeout: 30
+            OriginSSLProtocols:
+            - TLSv1
+            - TLSv1.1
+            - TLSv1.2
+        DefaultCacheBehavior:
+          TargetOriginId: HttpEdgeOrigin
+          ForwardedValues:
+            QueryString: true
+            Cookies:
+              Forward: all
+          ViewerProtocolPolicy: redirect-to-https
+          MinTTL: 0
+          AllowedMethods:
+          - HEAD
+          - DELETE
+          - POST
+          - GET
+          - OPTIONS
+          - PUT
+          - PATCH
+          CachedMethods:
+          - GET
+          - HEAD
+          SmoothStreaming: false
+          DefaultTTL: 86400
+          MaxTTL: 31536000
+          Compress: true
+        PriceClass: PriceClass_All
+        ViewerCertificate:
+          AcmCertificateArn:
+            Ref: Certificate
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2019
+  HttpDNS:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: arc-macro-dns.com.
+      RecordSets:
+      - Name: qa.arc-macro-dns.com.
+        Type: A
+        AliasTarget:
+          HostedZoneId: Z2FDTNDATAQYW2
+          DNSName:
+            Fn::GetAtt:
+            - HttpCDN
+            - DomainName
 Outputs:
+  API:
+    Description: API Gateway (HTTP)
+    Value:
+      Fn::Sub:
+      - https://${ApiId}.execute-api.${AWS::Region}.amazonaws.com
+      - ApiId:
+          Ref: HTTP
+  ApiId:
+    Description: API ID (ApiId)
+    Value:
+      Ref: HTTP
   BucketURL:
     Description: Bucket URL
     Value:
