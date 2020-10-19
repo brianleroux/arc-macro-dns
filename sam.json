@@ -1,0 +1,362 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Transform": "AWS::Serverless-2016-10-31",
+  "Description": "Exported by architect/package@3.0.0-RC.2 on 2020-10-18T22:50:21.589Z",
+  "Resources": {
+    "StaticBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "AccessControl": "PublicRead",
+        "WebsiteConfiguration": {
+          "IndexDocument": "index.html",
+          "ErrorDocument": "404.html"
+        }
+      }
+    },
+    "Role": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "ArcGlobalPolicy",
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogStreams"
+                  ],
+                  "Resource": "arn:aws:logs:*:*:*"
+                }
+              ]
+            }
+          },
+          {
+            "PolicyName": "ArcStaticBucketPolicy",
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "s3:PutObjectAcl",
+                    "s3:DeleteObject"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": [
+                        "arn:aws:s3:::${bukkit}",
+                        {
+                          "bukkit": {
+                            "Ref": "StaticBucket"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "Fn::Sub": [
+                        "arn:aws:s3:::${bukkit}/*",
+                        {
+                          "bukkit": {
+                            "Ref": "StaticBucket"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "StaticBucketParam": {
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {
+        "Type": "String",
+        "Name": {
+          "Fn::Sub": [
+            "/${AWS::StackName}/static/${key}",
+            {
+              "key": "bucket"
+            }
+          ]
+        },
+        "Value": {
+          "Ref": "StaticBucket"
+        }
+      }
+    },
+    "StaticFingerprintParam": {
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {
+        "Type": "String",
+        "Name": {
+          "Fn::Sub": [
+            "/${AWS::StackName}/static/${key}",
+            {
+              "key": "fingerprint"
+            }
+          ]
+        },
+        "Value": "false"
+      }
+    },
+    "ParameterStorePolicy": {
+      "Type": "AWS::IAM::Policy",
+      "DependsOn": "Role",
+      "Properties": {
+        "PolicyName": "ArcParameterStorePolicy",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "ssm:GetParametersByPath",
+              "Resource": {
+                "Fn::Sub": [
+                  "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AWS::StackName}",
+                  {}
+                ]
+              }
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "Role"
+          }
+        ]
+      }
+    },
+    "Certificate": {
+      "Type": "AWS::CertificateManager::Certificate",
+      "Properties": {
+        "ValidationMethod": "DNS",
+        "DomainName": "arc-macro-dns.com",
+        "SubjectAlternativeNames": [
+          "*.arc-macro-dns.com"
+        ]
+      }
+    },
+    "StaticStagingCDN": {
+      "Type": "AWS::CloudFront::Distribution",
+      "Properties": {
+        "DistributionConfig": {
+          "Aliases": [
+            "static-qa.arc-macro-dns.com"
+          ],
+          "HttpVersion": "http2",
+          "IPV6Enabled": true,
+          "Enabled": true,
+          "Origins": [
+            {
+              "Id": "EdgeOrigin",
+              "DomainName": {
+                "Fn::Sub": [
+                  "${bukkit}.s3-website-${AWS::Region}.amazonaws.com",
+                  {
+                    "bukkit": {
+                      "Ref": "StaticBucket"
+                    }
+                  }
+                ]
+              },
+              "CustomOriginConfig": {
+                "HTTPPort": 80,
+                "HTTPSPort": 443,
+                "OriginKeepaliveTimeout": 5,
+                "OriginProtocolPolicy": "http-only",
+                "OriginReadTimeout": 30,
+                "OriginSSLProtocols": [
+                  "TLSv1",
+                  "TLSv1.1",
+                  "TLSv1.2"
+                ]
+              }
+            }
+          ],
+          "DefaultCacheBehavior": {
+            "TargetOriginId": "EdgeOrigin",
+            "ForwardedValues": {
+              "QueryString": true,
+              "Cookies": {
+                "Forward": "all"
+              }
+            },
+            "ViewerProtocolPolicy": "redirect-to-https",
+            "MinTTL": 0,
+            "AllowedMethods": [
+              "HEAD",
+              "DELETE",
+              "POST",
+              "GET",
+              "OPTIONS",
+              "PUT",
+              "PATCH"
+            ],
+            "CachedMethods": [
+              "GET",
+              "HEAD"
+            ],
+            "SmoothStreaming": false,
+            "DefaultTTL": 86400,
+            "MaxTTL": 31536000,
+            "Compress": true
+          },
+          "PriceClass": "PriceClass_All",
+          "ViewerCertificate": {
+            "AcmCertificateArn": {
+              "Ref": "Certificate"
+            },
+            "SslSupportMethod": "sni-only",
+            "MinimumProtocolVersion": "TLSv1.2_2019"
+          }
+        }
+      }
+    },
+    "StaticProductionCDN": {
+      "Type": "AWS::CloudFront::Distribution",
+      "Properties": {
+        "DistributionConfig": {
+          "Aliases": [
+            "static.arc-macro-dns.com"
+          ],
+          "HttpVersion": "http2",
+          "IPV6Enabled": true,
+          "Enabled": true,
+          "Origins": [
+            {
+              "Id": "EdgeOrigin",
+              "DomainName": {
+                "Fn::Sub": [
+                  "${bukkit}.s3-website-${AWS::Region}.amazonaws.com",
+                  {
+                    "bukkit": {
+                      "Ref": "StaticBucket"
+                    }
+                  }
+                ]
+              },
+              "CustomOriginConfig": {
+                "HTTPPort": 80,
+                "HTTPSPort": 443,
+                "OriginKeepaliveTimeout": 5,
+                "OriginProtocolPolicy": "http-only",
+                "OriginReadTimeout": 30,
+                "OriginSSLProtocols": [
+                  "TLSv1",
+                  "TLSv1.1",
+                  "TLSv1.2"
+                ]
+              }
+            }
+          ],
+          "DefaultCacheBehavior": {
+            "TargetOriginId": "EdgeOrigin",
+            "ForwardedValues": {
+              "QueryString": true,
+              "Cookies": {
+                "Forward": "all"
+              }
+            },
+            "ViewerProtocolPolicy": "redirect-to-https",
+            "MinTTL": 0,
+            "AllowedMethods": [
+              "HEAD",
+              "DELETE",
+              "POST",
+              "GET",
+              "OPTIONS",
+              "PUT",
+              "PATCH"
+            ],
+            "CachedMethods": [
+              "GET",
+              "HEAD"
+            ],
+            "SmoothStreaming": false,
+            "DefaultTTL": 86400,
+            "MaxTTL": 31536000,
+            "Compress": true
+          },
+          "PriceClass": "PriceClass_All",
+          "ViewerCertificate": {
+            "AcmCertificateArn": {
+              "Ref": "Certificate"
+            },
+            "SslSupportMethod": "sni-only",
+            "MinimumProtocolVersion": "TLSv1.2_2019"
+          }
+        }
+      }
+    },
+    "StaticStagingDNS": {
+      "Type": "AWS::Route53::RecordSet",
+      "Properties": {
+        "HostedZoneName": "arc-macro-dns.com.",
+        "Name": "static-qa.arc-macro-dns.com.",
+        "Type": "A",
+        "TTL": "900",
+        "AliasTarget": {
+          "HostedZoneId": "Z2FDTNDATAQYW2",
+          "DNSName": {
+            "Fn::GetAtt": [
+              "StaticStagingCDN",
+              "DomainName"
+            ]
+          }
+        }
+      }
+    },
+    "StaticProductionDNS": {
+      "Type": "AWS::Route53::RecordSet",
+      "Properties": {
+        "HostedZoneName": "arc-macro-dns.com.",
+        "Name": "static.arc-macro-dns.com.",
+        "Type": "A",
+        "TTL": "900",
+        "AliasTarget": {
+          "HostedZoneId": "Z2FDTNDATAQYW2",
+          "DNSName": {
+            "Fn::GetAtt": [
+              "StaticProductionCDN",
+              "DomainName"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "BucketURL": {
+      "Description": "Bucket URL",
+      "Value": {
+        "Fn::Sub": [
+          "http://${bukkit}.s3-website-${AWS::Region}.amazonaws.com",
+          {
+            "bukkit": {
+              "Ref": "StaticBucket"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

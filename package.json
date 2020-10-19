@@ -1,0 +1,26 @@
+{
+  "name": "arc-macro-dns",
+  "version": "1.0.0",
+  "description": "- must be deployed in us-east-1 - must be in the same account as the",
+  "main": "index.js",
+  "scripts": {
+        "lint": "eslint . --fix",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "extract-domain": "^2.2.1"
+  },
+  "devDependencies": {
+    "@architect/eslint-config": "^1.0.0",
+    "eslint": "^7.11.0"
+  },
+  "eslintConfig": {
+    "rules": {
+      "require-await": 0
+    },
+    "extends": "@architect/eslint-config"
+  }
+}
