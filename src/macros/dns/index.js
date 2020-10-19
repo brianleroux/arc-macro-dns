@@ -1,6 +1,7 @@
 let getTLD = require('./get-tld')
 let getStaticCDN = require('./get-static-cdn')
 let getAlias = require('./get-alias')
+let getZoneID = require('./get-zone-id')
 
 // This code assumes the following is true:
 //
@@ -16,13 +17,20 @@ module.exports = async function dns (arc, cfn, stage) {
     // assumes one zone for all dns records
     let zone = getTLD(arc)
 
+    // call the api to get the zone id; this is a bit of a wart
+    let HostedZoneId = await getZoneID(zone)
+
     // one cert for the entire zone
     cfn.Resources.Certificate = {
       Type: 'AWS::CertificateManager::Certificate',
       Properties: {
         ValidationMethod: 'DNS', // required!
         DomainName: zone,
-        SubjectAlternativeNames: [ `*.${zone}` ]
+        SubjectAlternativeNames: [ `*.${zone}` ],
+        DomainValidationOptions: [{
+          DomainName: zone,
+          HostedZoneId,
+        }]
       }
     }
 

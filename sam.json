@@ -1,7 +1,7 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Transform": "AWS::Serverless-2016-10-31",
-  "Description": "Exported by architect/package@3.0.0-RC.2 on 2020-10-19T00:15:15.766Z",
+  "Description": "Exported by architect/package@3.0.0-RC.2 on 2020-10-19T01:13:04.959Z",
   "Resources": {
     "StaticBucket": {
       "Type": "AWS::S3::Bucket",
@@ -152,6 +152,12 @@
         "DomainName": "arc-macro-dns.com",
         "SubjectAlternativeNames": [
           "*.arc-macro-dns.com"
+        ],
+        "DomainValidationOptions": [
+          {
+            "DomainName": "arc-macro-dns.com",
+            "HostedZoneId": "Z05497002JX7WTK1ODXI9"
+          }
         ]
       }
     },
@@ -232,21 +238,24 @@
       }
     },
     "StaticDNS": {
-      "Type": "AWS::Route53::RecordSet",
+      "Type": "AWS::Route53::RecordSetGroup",
       "Properties": {
         "HostedZoneName": "arc-macro-dns.com.",
-        "Name": "static-qa.arc-macro-dns.com.",
-        "Type": "A",
-        "TTL": "900",
-        "AliasTarget": {
-          "HostedZoneId": "Z2FDTNDATAQYW2",
-          "DNSName": {
-            "Fn::GetAtt": [
-              "StaticCDN",
-              "DomainName"
-            ]
+        "RecordSets": [
+          {
+            "Name": "static-qa.arc-macro-dns.com.",
+            "Type": "A",
+            "AliasTarget": {
+              "HostedZoneId": "Z2FDTNDATAQYW2",
+              "DNSName": {
+                "Fn::GetAtt": [
+                  "StaticCDN",
+                  "DomainName"
+                ]
+              }
+            }
           }
-        }
+        ]
       }
     }
   },
