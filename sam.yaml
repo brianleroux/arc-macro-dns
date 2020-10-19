@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Exported by architect/package@3.0.0-RC.2 on 2020-10-18T22:50:21.589Z
+Description: Exported by architect/package@3.0.0-RC.2 on 2020-10-19T00:15:15.766Z
 Resources:
   StaticBucket:
     Type: AWS::S3::Bucket
@@ -89,7 +89,7 @@ Resources:
       DomainName: arc-macro-dns.com
       SubjectAlternativeNames:
       - '*.arc-macro-dns.com'
-  StaticStagingCDN:
+  StaticCDN:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
@@ -144,62 +144,7 @@ Resources:
             Ref: Certificate
           SslSupportMethod: sni-only
           MinimumProtocolVersion: TLSv1.2_2019
-  StaticProductionCDN:
-    Type: AWS::CloudFront::Distribution
-    Properties:
-      DistributionConfig:
-        Aliases:
-        - static.arc-macro-dns.com
-        HttpVersion: http2
-        IPV6Enabled: true
-        Enabled: true
-        Origins:
-        - Id: EdgeOrigin
-          DomainName:
-            Fn::Sub:
-            - ${bukkit}.s3-website-${AWS::Region}.amazonaws.com
-            - bukkit:
-                Ref: StaticBucket
-          CustomOriginConfig:
-            HTTPPort: 80
-            HTTPSPort: 443
-            OriginKeepaliveTimeout: 5
-            OriginProtocolPolicy: http-only
-            OriginReadTimeout: 30
-            OriginSSLProtocols:
-            - TLSv1
-            - TLSv1.1
-            - TLSv1.2
-        DefaultCacheBehavior:
-          TargetOriginId: EdgeOrigin
-          ForwardedValues:
-            QueryString: true
-            Cookies:
-              Forward: all
-          ViewerProtocolPolicy: redirect-to-https
-          MinTTL: 0
-          AllowedMethods:
-          - HEAD
-          - DELETE
-          - POST
-          - GET
-          - OPTIONS
-          - PUT
-          - PATCH
-          CachedMethods:
-          - GET
-          - HEAD
-          SmoothStreaming: false
-          DefaultTTL: 86400
-          MaxTTL: 31536000
-          Compress: true
-        PriceClass: PriceClass_All
-        ViewerCertificate:
-          AcmCertificateArn:
-            Ref: Certificate
-          SslSupportMethod: sni-only
-          MinimumProtocolVersion: TLSv1.2_2019
-  StaticStagingDNS:
+  StaticDNS:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneName: arc-macro-dns.com.
@@ -210,20 +155,7 @@ Resources:
         HostedZoneId: Z2FDTNDATAQYW2
         DNSName:
           Fn::GetAtt:
-          - StaticStagingCDN
-          - DomainName
-  StaticProductionDNS:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      HostedZoneName: arc-macro-dns.com.
-      Name: static.arc-macro-dns.com.
-      Type: A
-      TTL: '900'
-      AliasTarget:
-        HostedZoneId: Z2FDTNDATAQYW2
-        DNSName:
-          Fn::GetAtt:
-          - StaticProductionCDN
+          - StaticCDN
           - DomainName
 Outputs:
   BucketURL:

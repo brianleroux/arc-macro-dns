@@ -10,7 +10,7 @@ let getAlias = require('./get-alias')
 // - the domain resides in your AWS account
 // - we are using DNS validation
 //
-module.exports = async function dns (arc, cfn) {
+module.exports = async function dns (arc, cfn, stage) {
   if (arc.dns) {
 
     // assumes one zone for all dns records
@@ -30,10 +30,8 @@ module.exports = async function dns (arc, cfn) {
     let hasStatic = i => Object.keys(i)[0] === 'static'
     if (arc.dns.some(hasStatic)) {
       let ref = arc.dns.find(hasStatic)['static']
-      cfn.Resources.StaticStagingCDN = getStaticCDN({ domain: ref.staging })
-      cfn.Resources.StaticProductionCDN = getStaticCDN({ domain: ref.production })
-      cfn.Resources.StaticStagingDNS = getAlias({ zone, cdn: 'StaticStagingCDN', domain: ref.staging })
-      cfn.Resources.StaticProductionDNS = getAlias({ zone, cdn: 'StaticProductionCDN', domain: ref.production })
+      cfn.Resources.StaticCDN = getStaticCDN({ domain: ref[stage] })
+      cfn.Resources.StaticDNS = getAlias({ zone, cdn: 'StaticCDN', domain: ref[stage] })
     }
 
     // setup @http dns
