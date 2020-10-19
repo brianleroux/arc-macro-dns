@@ -7,8 +7,13 @@ dns
 @cdn
 false # important; if we don't have this the deploy script will disable
 
+@ws
+
 @http
+get /api
+
 @static
+fingerprint true
 folder src/frontend
 
 @dns
@@ -18,4 +23,6 @@ static
 http
   staging qa.arc-macro-dns.com
   production arc-macro-dns.com
-
+ws
+  staging qa-ws.arc-macro-dns.com
+  production ws.arc-macro-dns.com

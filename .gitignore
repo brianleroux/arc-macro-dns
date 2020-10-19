@@ -1,1 +1,4 @@
 node_modules
+src/frontend/static.json
+sam.json
+sam.yaml

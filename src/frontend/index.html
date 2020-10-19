@@ -1,1 +1,13 @@
-hello world
+<!doctype html>
+<html>
+<meta charset=UTF-8>
+<meta name=viewport content=width=device-width,initial-scale=1>
+<link href="data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQEAYAAABPYyMiAAAABmJLR0T///////8JWPfcAAAACXBIWXMAAABIAAAASABGyWs+AAAAF0lEQVRIx2NgGAWjYBSMglEwCkbBSAcACBAAAeaR9cIAAAAASUVORK5CYII=" rel=icon type=image/x-icon>
+<!-- use special arc.static syntax to get fingerprinted values at runtime -->
+<link rel=stylesheet href=${arc.static('/index.css')}>
+<body>
+<main>hello world</main>
+</body>
+<!-- use special arc.static syntax to get fingerprinted values at runtime -->
+<script type=module src=${arc.static('/index.js')}></script>
+</html>

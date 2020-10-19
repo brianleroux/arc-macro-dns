@@ -1,8 +1,9 @@
 let getTLD = require('./get-tld')
+let getZoneID = require('./get-zone-id')
 let getStaticCDN = require('./get-static-cdn')
 let getHttpCDN = require('./get-http-cdn')
+let getWsCDN = require('./get-ws-cdn')
 let getAlias = require('./get-alias')
-let getZoneID = require('./get-zone-id')
 
 // This code assumes the following is true:
 //
@@ -28,10 +29,10 @@ module.exports = async function dns (arc, cfn, stage) {
         ValidationMethod: 'DNS', // required!
         DomainName: zone,
         SubjectAlternativeNames: [ `*.${zone}` ],
-        DomainValidationOptions: [{
+        DomainValidationOptions: [ {
           DomainName: zone,
           HostedZoneId,
-        }]
+        } ]
       }
     }
 
@@ -51,13 +52,13 @@ module.exports = async function dns (arc, cfn, stage) {
       cfn.Resources.HttpDNS = getAlias({ zone, cdn: 'HttpCDN', domain: ref[stage] })
     }
 
-    /* setup @ws dns
+    // setup @ws dns
     let hasWs = i => Object.keys(i)[0] === 'ws'
     if (arc.dns.some(hasHttp)) {
       let ref = arc.dns.find(hasWs)['ws']
-      cfn.Resources.WsCDN = getWsCDN({ domain: ref[stage] })
+      cfn.Resources.WsCDN = getWsCDN({ domain: ref[stage], stage })
       cfn.Resources.WsDNS = getAlias({ zone, cdn: 'WsCDN', domain: ref[stage] })
-    }*/
+    }
 
   // end
   }

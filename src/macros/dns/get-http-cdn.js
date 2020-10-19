@@ -1,4 +1,4 @@
-module.exports = function getHttpCDN({ domain }) {
+module.exports = function getHttpCDN ({ domain }) {
   return {
     Type: 'AWS::CloudFront::Distribution',
     Properties: {
@@ -7,7 +7,7 @@ module.exports = function getHttpCDN({ domain }) {
         HttpVersion: 'http2',
         IPV6Enabled: true,
         Enabled: true,
-        Origins: [{
+        Origins: [ {
           Id: 'HttpEdgeOrigin',
           DomainName: {
             'Fn::Sub': [
@@ -23,7 +23,7 @@ module.exports = function getHttpCDN({ domain }) {
             OriginReadTimeout: 30,
             OriginSSLProtocols: [ 'TLSv1', 'TLSv1.1', 'TLSv1.2' ],
           }
-        }],
+        } ],
         DefaultCacheBehavior: {
           TargetOriginId: 'HttpEdgeOrigin',
           ForwardedValues: {

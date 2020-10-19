@@ -1,18 +1,18 @@
 module.exports = function getDNS ({ zone, cdn, domain }) {
   return {
-    Type: "AWS::Route53::RecordSetGroup",
+    Type: 'AWS::Route53::RecordSetGroup',
     Properties: {
       HostedZoneName: `${zone}.`,
-      RecordSets: [{
+      RecordSets: [ {
         Name: `${domain}.`,
-        Type: "A",
+        Type: 'A',
         AliasTarget: {
-          HostedZoneId: "Z2FDTNDATAQYW2",
+          HostedZoneId: 'Z2FDTNDATAQYW2',
           DNSName: {
-            "Fn::GetAtt": [cdn, "DomainName"]
+            'Fn::GetAtt': [ cdn, 'DomainName' ]
           }
         }
-      }]
+      } ]
     }
   }
 }
